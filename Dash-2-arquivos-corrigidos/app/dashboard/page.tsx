@@ -2,14 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { startOfMonth } from 'date-fns'
-import { Plus, DollarSign, Users, Calendar, TrendingUp } from 'lucide-react'
+import { Plus, DollarSign, Users, Calendar, TrendingUp, Target, Percent } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DateFilter, CompareMode, getComparisonDates } from '@/components/dashboard/date-filter'
-import { KPICard } from '@/components/dashboard/kpi-card'
 import { MarketingTable } from '@/components/dashboard/marketing-table'
 import { MetricFormDialog } from '@/components/dashboard/metric-form-dialog'
 import { ComparisonChart } from '@/components/dashboard/comparison-chart'
+import {
+  MetricOrderControl,
+  type OrderedMetricOption,
+} from '@/components/dashboard/metric-order-control'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MARKETING_SOURCES, MarketingMetric } from '@/lib/types'
@@ -166,6 +169,112 @@ export default function DashboardPage() {
     },
   ]
 
+  const kpiMetrics: OrderedMetricOption[] = [
+    {
+      id: 'overview-investimento-total',
+      title: 'Investimento Total',
+      value: totalInvestimento,
+      previousValue: prevInvestimento,
+      format: 'currency',
+      trend: investimentoTrend,
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Visao Geral',
+      description: 'Soma dos investimentos do periodo filtrado.',
+    },
+    {
+      id: 'overview-mqls',
+      title: 'MQLs',
+      value: totalMqls,
+      previousValue: prevMqls,
+      format: 'number',
+      trend: mqlsTrend,
+      icon: <Users className="h-4 w-4" />,
+      category: 'Funil',
+      description: 'Total de leads qualificados de marketing.',
+    },
+    {
+      id: 'overview-demo-agendadas',
+      title: 'DEMO Agendadas',
+      value: totalDemoAgendadas,
+      previousValue: prevDemoAgendadas,
+      format: 'number',
+      trend: calculateTrend(totalDemoAgendadas, prevDemoAgendadas),
+      icon: <Calendar className="h-4 w-4" />,
+      category: 'Funil',
+    },
+    {
+      id: 'overview-demo-realizadas',
+      title: 'DEMO Realizadas',
+      value: totalDemoRealizadas,
+      previousValue: prevDemoRealizadas,
+      format: 'number',
+      trend: calculateTrend(totalDemoRealizadas, prevDemoRealizadas),
+      icon: <Target className="h-4 w-4" />,
+      category: 'Funil',
+    },
+    {
+      id: 'overview-onboarding',
+      title: 'Onboarding',
+      value: totalOnboarding,
+      previousValue: prevOnboarding,
+      format: 'number',
+      trend: onboardingTrend,
+      icon: <TrendingUp className="h-4 w-4" />,
+      category: 'Funil',
+    },
+    {
+      id: 'overview-ciclo-venda',
+      title: 'Ciclo de Venda (dias)',
+      value: Math.round(avgCicloVenda),
+      format: 'number',
+      icon: <Calendar className="h-4 w-4" />,
+      category: 'Vendas',
+    },
+    {
+      id: 'overview-cpl',
+      title: 'CPL',
+      value: currentCpl,
+      previousValue: previousCpl,
+      format: 'currency',
+      trend: calculateTrend(currentCpl, previousCpl),
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Custos',
+    },
+    {
+      id: 'overview-cpo',
+      title: 'CPO',
+      value: currentCpo,
+      previousValue: previousCpo,
+      format: 'currency',
+      trend: calculateTrend(currentCpo, previousCpo),
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Custos',
+    },
+    {
+      id: 'overview-cpa',
+      title: 'CPA',
+      value: currentCpa,
+      previousValue: previousCpa,
+      format: 'currency',
+      trend: calculateTrend(currentCpa, previousCpa),
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Custos',
+    },
+    {
+      id: 'overview-mql-demo-rate',
+      title: 'MQL > DEMO Agendada',
+      value: totalMqls > 0 ? (totalDemoAgendadas / totalMqls) * 100 : 0,
+      previousValue: prevMqls > 0 ? (prevDemoAgendadas / prevMqls) * 100 : 0,
+      format: 'percent',
+      trend: calculateTrend(
+        totalMqls > 0 ? (totalDemoAgendadas / totalMqls) * 100 : 0,
+        prevMqls > 0 ? (prevDemoAgendadas / prevMqls) * 100 : 0
+      ),
+      icon: <Percent className="h-4 w-4" />,
+      category: 'Conversao',
+    },
+  ]
+
   return (
     <div className="min-h-screen">
       <DashboardHeader
@@ -204,39 +313,16 @@ export default function DashboardPage() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-              <KPICard
-                title="Investimento Total"
-                value={totalInvestimento}
-                previousValue={prevInvestimento}
-                format="currency"
-                trend={investimentoTrend}
-                icon={<DollarSign className="h-4 w-4" />}
-              />
-              <KPICard
-                title="MQLs"
-                value={totalMqls}
-                previousValue={prevMqls}
-                format="number"
-                trend={mqlsTrend}
-                icon={<Users className="h-4 w-4" />}
-              />
-              <KPICard
-                title="Onboarding"
-                value={totalOnboarding}
-                previousValue={prevOnboarding}
-                format="number"
-                trend={onboardingTrend}
-                icon={<TrendingUp className="h-4 w-4" />}
-              />
-              <KPICard
-                title="Ciclo de Venda (dias)"
-                value={Math.round(avgCicloVenda)}
-                format="number"
-                icon={<Calendar className="h-4 w-4" />}
-              />
-            </div>
+            <MetricOrderControl
+              storageKey="avalyst-dashboard-kpis-overview"
+              metrics={kpiMetrics}
+              defaultMetricIds={[
+                'overview-investimento-total',
+                'overview-mqls',
+                'overview-onboarding',
+                'overview-ciclo-venda',
+              ]}
+            />
 
             {/* Charts Row */}
             <div className="grid gap-6 md:grid-cols-2 mb-8">

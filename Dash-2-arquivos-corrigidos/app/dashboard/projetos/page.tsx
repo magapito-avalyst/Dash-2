@@ -8,8 +8,11 @@ import { DashboardHeader } from '@/components/dashboard/header'
 import { DateFilter, CompareMode, getComparisonDates } from '@/components/dashboard/date-filter'
 import { ProjectFormDialog } from '@/components/dashboard/project-form-dialog'
 import { ProjectMetricFormDialog } from '@/components/dashboard/project-metric-form-dialog'
-import { KPICard } from '@/components/dashboard/kpi-card'
 import { ComparisonChart } from '@/components/dashboard/comparison-chart'
+import {
+  MetricOrderControl,
+  type OrderedMetricOption,
+} from '@/components/dashboard/metric-order-control'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -226,6 +229,44 @@ export default function ProjetosPage() {
 
   const totalCurrentValue = sum(projectMetrics.map((metric) => Number(metric.metric_value)))
   const totalPreviousValue = sum(compareMetrics.map((metric) => Number(metric.metric_value)))
+  const kpiMetrics: OrderedMetricOption[] = [
+    {
+      id: 'projects-active',
+      title: 'Projetos ativos',
+      value: projects.length,
+      format: 'number',
+      icon: <FolderKanban className="h-4 w-4" />,
+      category: 'Projetos',
+    },
+    {
+      id: 'projects-metrics-count',
+      title: 'Metricas no periodo',
+      value: projectMetrics.length,
+      format: 'number',
+      icon: <ChartNoAxesCombined className="h-4 w-4" />,
+      category: 'Projetos',
+    },
+    {
+      id: 'projects-total-value',
+      title: 'Valor total das metricas',
+      value: totalCurrentValue,
+      previousValue: totalPreviousValue,
+      trend: calculateTrend(totalCurrentValue, totalPreviousValue),
+      format: 'number',
+      icon: <TrendingUp className="h-4 w-4" />,
+      category: 'Projetos',
+    },
+    ...chartData.map((metric): OrderedMetricOption => ({
+      id: `project-custom-${metric.label}`,
+      title: metric.label,
+      value: metric.atual,
+      previousValue: metric.comparativo,
+      trend: calculateTrend(metric.atual, metric.comparativo),
+      format: 'number',
+      icon: <ChartNoAxesCombined className="h-4 w-4" />,
+      category: selectedProject ? `Metricas: ${selectedProject.name}` : 'Metricas do projeto',
+    })),
+  ]
 
   return (
     <div className="min-h-screen">
@@ -263,28 +304,16 @@ export default function ProjetosPage() {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <KPICard
-            title="Projetos ativos"
-            value={projects.length}
-            format="number"
-            icon={<FolderKanban className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Metricas no periodo"
-            value={projectMetrics.length}
-            format="number"
-            icon={<ChartNoAxesCombined className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Valor total das metricas"
-            value={totalCurrentValue}
-            previousValue={totalPreviousValue}
-            trend={calculateTrend(totalCurrentValue, totalPreviousValue)}
-            format="number"
-            icon={<TrendingUp className="h-4 w-4" />}
-          />
-        </div>
+        <MetricOrderControl
+          key={selectedProjectId || 'all-projects'}
+          storageKey={`avalyst-dashboard-kpis-projects-${selectedProjectId || 'all'}`}
+          metrics={kpiMetrics}
+          defaultMetricIds={[
+            'projects-active',
+            'projects-metrics-count',
+            'projects-total-value',
+          ]}
+        />
 
         <Card>
           <CardHeader>

@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { startOfMonth } from 'date-fns'
-import { Plus, UserPlus, Trophy, XCircle, CalendarRange } from 'lucide-react'
+import { Plus, UserPlus, Trophy, XCircle, CalendarRange, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DateFilter, CompareMode, getComparisonDates } from '@/components/dashboard/date-filter'
-import { KPICard } from '@/components/dashboard/kpi-card'
 import { CRMFormDialog } from '@/components/dashboard/crm-form-dialog'
 import { ComparisonChart } from '@/components/dashboard/comparison-chart'
+import {
+  MetricOrderControl,
+  type OrderedMetricOption,
+} from '@/components/dashboard/metric-order-control'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -162,6 +165,98 @@ export default function CRMPage() {
     { label: 'LOST', atual: totalLost, comparativo: prevLost },
   ]
 
+  const kpiMetrics: OrderedMetricOption[] = [
+    {
+      id: 'crm-novos-leads',
+      title: 'Novos Leads',
+      value: totalNovosLeads,
+      previousValue: prevLeads,
+      trend: calculateTrend(totalNovosLeads, prevLeads),
+      format: 'number',
+      icon: <UserPlus className="h-4 w-4" />,
+      category: 'CRM',
+    },
+    {
+      id: 'crm-won',
+      title: 'WON',
+      value: totalWon,
+      previousValue: prevWon,
+      trend: calculateTrend(totalWon, prevWon),
+      format: 'number',
+      icon: <Trophy className="h-4 w-4" />,
+      category: 'Status',
+    },
+    {
+      id: 'crm-lost',
+      title: 'LOST',
+      value: totalLost,
+      previousValue: prevLost,
+      trend: calculateTrend(totalLost, prevLost),
+      format: 'number',
+      icon: <XCircle className="h-4 w-4" />,
+      category: 'Status',
+    },
+    {
+      id: 'crm-taxa-conversao',
+      title: 'Taxa de Conversao',
+      value: conversionRate,
+      previousValue: prevConversionRate,
+      trend: calculateTrend(conversionRate, prevConversionRate),
+      format: 'percent',
+      icon: <CalendarRange className="h-4 w-4" />,
+      category: 'Conversao',
+    },
+    {
+      id: 'crm-fase-novos-leads',
+      title: 'Fase: Novos Leads',
+      value: sum(metrics.map((metric) => metric.fase_novos_leads)),
+      previousValue: sum(compareMetrics.map((metric) => metric.fase_novos_leads)),
+      trend: calculateTrend(
+        sum(metrics.map((metric) => metric.fase_novos_leads)),
+        sum(compareMetrics.map((metric) => metric.fase_novos_leads))
+      ),
+      format: 'number',
+      icon: <Users className="h-4 w-4" />,
+      category: 'Funil comercial',
+    },
+    {
+      id: 'crm-discovery',
+      title: 'Discovery',
+      value: sum(metrics.map((metric) => metric.fase_discovery)),
+      previousValue: sum(compareMetrics.map((metric) => metric.fase_discovery)),
+      trend: calculateTrend(
+        sum(metrics.map((metric) => metric.fase_discovery)),
+        sum(compareMetrics.map((metric) => metric.fase_discovery))
+      ),
+      format: 'number',
+      icon: <Users className="h-4 w-4" />,
+      category: 'Funil comercial',
+    },
+    {
+      id: 'crm-qualificacao',
+      title: 'Qualificacao',
+      value: sum(metrics.map((metric) => metric.fase_qualificacao)),
+      previousValue: sum(compareMetrics.map((metric) => metric.fase_qualificacao)),
+      trend: calculateTrend(
+        sum(metrics.map((metric) => metric.fase_qualificacao)),
+        sum(compareMetrics.map((metric) => metric.fase_qualificacao))
+      ),
+      format: 'number',
+      icon: <Users className="h-4 w-4" />,
+      category: 'Funil comercial',
+    },
+    {
+      id: 'crm-reunioes',
+      title: 'Reunioes Agendadas',
+      value: totalReunioes,
+      previousValue: prevReunioes,
+      trend: calculateTrend(totalReunioes, prevReunioes),
+      format: 'number',
+      icon: <CalendarRange className="h-4 w-4" />,
+      category: 'Funil comercial',
+    },
+  ]
+
   return (
     <div className="min-h-screen">
       <DashboardHeader title="KPIs de CRM" subtitle="Leads, status WON/LOST e fases do funil comercial" />
@@ -185,40 +280,16 @@ export default function CRMPage() {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <KPICard
-            title="Novos Leads"
-            value={totalNovosLeads}
-            previousValue={prevLeads}
-            trend={calculateTrend(totalNovosLeads, prevLeads)}
-            format="number"
-            icon={<UserPlus className="h-4 w-4" />}
-          />
-          <KPICard
-            title="WON"
-            value={totalWon}
-            previousValue={prevWon}
-            trend={calculateTrend(totalWon, prevWon)}
-            format="number"
-            icon={<Trophy className="h-4 w-4" />}
-          />
-          <KPICard
-            title="LOST"
-            value={totalLost}
-            previousValue={prevLost}
-            trend={calculateTrend(totalLost, prevLost)}
-            format="number"
-            icon={<XCircle className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Taxa de Conversao"
-            value={conversionRate}
-            previousValue={prevConversionRate}
-            trend={calculateTrend(conversionRate, prevConversionRate)}
-            format="percent"
-            icon={<CalendarRange className="h-4 w-4" />}
-          />
-        </div>
+        <MetricOrderControl
+          storageKey="avalyst-dashboard-kpis-crm"
+          metrics={kpiMetrics}
+          defaultMetricIds={[
+            'crm-novos-leads',
+            'crm-won',
+            'crm-lost',
+            'crm-taxa-conversao',
+          ]}
+        />
 
         <div className="grid gap-6 md:grid-cols-2 mb-8">
           <ComparisonChart title="Fases do funil CRM" data={pipelineChartData} />
