@@ -12,6 +12,6 @@ yarn dev
 # or
 pnpm dev
 ```
-trigger vercel deploy
+trigger vercel deploy v2
 
 
