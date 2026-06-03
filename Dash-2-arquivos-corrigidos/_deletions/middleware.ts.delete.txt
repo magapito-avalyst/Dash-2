@@ -1,1 +1,0 @@
-Remover middleware.ts da raiz do projeto. Ele foi substituido por proxy.ts para compatibilidade com Next.js 16.
