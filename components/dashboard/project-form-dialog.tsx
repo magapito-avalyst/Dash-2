@@ -33,14 +33,16 @@ export function ProjectFormDialog({
   const [description, setDescription] = useState('')
 
   useEffect(() => {
-    if (project) {
-      setName(project.name)
-      setDescription(project.description ?? '')
-      return
-    }
+    queueMicrotask(() => {
+      if (project) {
+        setName(project.name)
+        setDescription(project.description ?? '')
+        return
+      }
 
-    setName('')
-    setDescription('')
+      setName('')
+      setDescription('')
+    })
   }, [project, open])
 
   const handleSubmit = async (event: React.FormEvent) => {

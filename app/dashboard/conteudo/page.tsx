@@ -6,9 +6,12 @@ import { Plus, Mail, Search, Instagram, Linkedin } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DateFilter, CompareMode, getComparisonDates } from '@/components/dashboard/date-filter'
-import { KPICard } from '@/components/dashboard/kpi-card'
 import { ContentFormDialog } from '@/components/dashboard/content-form-dialog'
 import { ComparisonChart } from '@/components/dashboard/comparison-chart'
+import {
+  MetricOrderControl,
+  type OrderedMetricOption,
+} from '@/components/dashboard/metric-order-control'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,7 +64,9 @@ export default function ConteudoPage() {
   }, [selectedMonth, compareMode])
 
   useEffect(() => {
-    fetchMetrics()
+    queueMicrotask(() => {
+      fetchMetrics()
+    })
   }, [fetchMetrics])
 
   const handleSubmit = async (data: Partial<ContentMetric>) => {
@@ -146,6 +151,187 @@ export default function ConteudoPage() {
   const compareInstagramLeads = sum(compareInstagramMetrics.map(m => m.conversao_lead))
   const compareLinkedinLeads = sum(compareLinkedinMetrics.map(m => m.conversao_lead))
 
+  const avgTaxaHardBounce = emailMetrics.length > 0
+    ? sum(emailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / emailMetrics.length
+    : 0
+  const avgTaxaConversaoEmail = emailMetrics.length > 0
+    ? sum(emailMetrics.map((metric) => Number(metric.taxa_conversao))) / emailMetrics.length
+    : 0
+  const compareAvgTaxaHardBounce = compareEmailMetrics.length > 0
+    ? sum(compareEmailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / compareEmailMetrics.length
+    : 0
+  const totalSeoUsuarios = sum(seoMetrics.map((metric) => metric.usuarios))
+  const avgDesempenhoSite = seoMetrics.length > 0
+    ? sum(seoMetrics.map((metric) => Number(metric.desempenho_site))) / seoMetrics.length
+    : 0
+  const totalInstagramTrafego = sum(instagramMetrics.map((metric) => metric.trafego_organico))
+  const totalLinkedinTrafego = sum(linkedinMetrics.map((metric) => metric.trafego_organico))
+  const compareInstagramTrafego = sum(compareInstagramMetrics.map((metric) => metric.trafego_organico))
+  const compareLinkedinTrafego = sum(compareLinkedinMetrics.map((metric) => metric.trafego_organico))
+  const avgInstagramConversao = instagramMetrics.length > 0
+    ? sum(instagramMetrics.map((metric) => Number(metric.taxa_conversao))) / instagramMetrics.length
+    : 0
+  const avgLinkedinConversao = linkedinMetrics.length > 0
+    ? sum(linkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / linkedinMetrics.length
+    : 0
+  const compareAvgInstagramConversao = compareInstagramMetrics.length > 0
+    ? sum(compareInstagramMetrics.map((metric) => Number(metric.taxa_conversao))) / compareInstagramMetrics.length
+    : 0
+  const compareAvgLinkedinConversao = compareLinkedinMetrics.length > 0
+    ? sum(compareLinkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / compareLinkedinMetrics.length
+    : 0
+
+  const contentKpiMetrics: OrderedMetricOption[] = [
+    {
+      id: 'content-email-entrega',
+      title: 'Taxa de Entrega',
+      value: avgTaxaEntrega,
+      previousValue: compareAvgTaxaEntrega,
+      trend: calculateTrend(avgTaxaEntrega, compareAvgTaxaEntrega),
+      format: 'percent',
+      icon: <Mail className="h-4 w-4" />,
+      category: 'E-mail Marketing',
+    },
+    {
+      id: 'content-email-hard-bounce',
+      title: 'Taxa Hard Bounce',
+      value: avgTaxaHardBounce,
+      previousValue: compareAvgTaxaHardBounce,
+      trend: calculateTrend(avgTaxaHardBounce, compareAvgTaxaHardBounce),
+      format: 'percent',
+      category: 'E-mail Marketing',
+    },
+    {
+      id: 'content-email-abertura',
+      title: 'Taxa de Abertura',
+      value: avgTaxaAbertura,
+      previousValue: compareAvgTaxaAbertura,
+      trend: calculateTrend(avgTaxaAbertura, compareAvgTaxaAbertura),
+      format: 'percent',
+      category: 'E-mail Marketing',
+    },
+    {
+      id: 'content-email-clique',
+      title: 'Taxa de Clique',
+      value: avgTaxaClique,
+      previousValue: compareAvgTaxaClique,
+      trend: calculateTrend(avgTaxaClique, compareAvgTaxaClique),
+      format: 'percent',
+      category: 'E-mail Marketing',
+    },
+    {
+      id: 'content-email-conversao',
+      title: 'Taxa de Conversao',
+      value: avgTaxaConversaoEmail,
+      previousValue: compareAvgTaxaConversao,
+      trend: calculateTrend(avgTaxaConversaoEmail, compareAvgTaxaConversao),
+      format: 'percent',
+      category: 'E-mail Marketing',
+    },
+    {
+      id: 'content-seo-trafego',
+      title: 'Trafego Organico',
+      value: totalTrafegoOrganico,
+      previousValue: compareTrafegoOrganico,
+      trend: calculateTrend(totalTrafegoOrganico, compareTrafegoOrganico),
+      format: 'number',
+      icon: <Search className="h-4 w-4" />,
+      category: 'SEO',
+    },
+    {
+      id: 'content-seo-sessoes',
+      title: 'Sessoes',
+      value: totalSessoes,
+      previousValue: compareSessoes,
+      trend: calculateTrend(totalSessoes, compareSessoes),
+      format: 'number',
+      category: 'SEO',
+    },
+    {
+      id: 'content-seo-usuarios',
+      title: 'Usuarios',
+      value: totalSeoUsuarios,
+      previousValue: compareUsuarios,
+      trend: calculateTrend(totalSeoUsuarios, compareUsuarios),
+      format: 'number',
+      category: 'SEO',
+    },
+    {
+      id: 'content-seo-palavras',
+      title: 'Palavras Indexadas',
+      value: totalPalavrasIndexadas,
+      previousValue: comparePalavrasIndexadas,
+      trend: calculateTrend(totalPalavrasIndexadas, comparePalavrasIndexadas),
+      format: 'number',
+      category: 'SEO',
+    },
+    {
+      id: 'content-seo-desempenho',
+      title: 'Desempenho Site',
+      value: avgDesempenhoSite,
+      previousValue: compareDesempenhoSite,
+      trend: calculateTrend(avgDesempenhoSite, compareDesempenhoSite),
+      format: 'percent',
+      category: 'SEO',
+    },
+    {
+      id: 'content-instagram-trafego',
+      title: 'Trafego/Sessoes',
+      value: totalInstagramTrafego,
+      previousValue: compareInstagramTrafego,
+      trend: calculateTrend(totalInstagramTrafego, compareInstagramTrafego),
+      format: 'number',
+      icon: <Instagram className="h-4 w-4" />,
+      category: 'Instagram',
+    },
+    {
+      id: 'content-instagram-leads',
+      title: 'Conversao de Lead',
+      value: totalInstagramLeads,
+      previousValue: compareInstagramLeads,
+      trend: calculateTrend(totalInstagramLeads, compareInstagramLeads),
+      format: 'number',
+      category: 'Instagram',
+    },
+    {
+      id: 'content-instagram-conversao',
+      title: 'Taxa de Conversao',
+      value: avgInstagramConversao,
+      previousValue: compareAvgInstagramConversao,
+      trend: calculateTrend(avgInstagramConversao, compareAvgInstagramConversao),
+      format: 'percent',
+      category: 'Instagram',
+    },
+    {
+      id: 'content-linkedin-trafego',
+      title: 'Trafego/Sessoes',
+      value: totalLinkedinTrafego,
+      previousValue: compareLinkedinTrafego,
+      trend: calculateTrend(totalLinkedinTrafego, compareLinkedinTrafego),
+      format: 'number',
+      icon: <Linkedin className="h-4 w-4" />,
+      category: 'LinkedIn',
+    },
+    {
+      id: 'content-linkedin-leads',
+      title: 'Conversao de Lead',
+      value: totalLinkedinLeads,
+      previousValue: compareLinkedinLeads,
+      trend: calculateTrend(totalLinkedinLeads, compareLinkedinLeads),
+      format: 'number',
+      category: 'LinkedIn',
+    },
+    {
+      id: 'content-linkedin-conversao',
+      title: 'Taxa de Conversao',
+      value: avgLinkedinConversao,
+      previousValue: compareAvgLinkedinConversao,
+      trend: calculateTrend(avgLinkedinConversao, compareAvgLinkedinConversao),
+      format: 'percent',
+      category: 'LinkedIn',
+    },
+  ]
+
   const getCurrentChannelMetrics = () => {
     switch (activeChannel) {
       case 'email_marketing': return emailMetrics
@@ -228,54 +414,18 @@ export default function ConteudoPage() {
       case 'email_marketing':
         return (
           <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-              <KPICard
-                title="Taxa de Entrega"
-                value={avgTaxaEntrega}
-                format="percent"
-                icon={<Mail className="h-4 w-4" />}
-              />
-              <KPICard
-                title="Taxa Hard Bounce"
-                value={emailMetrics.length > 0 
-                  ? sum(emailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / emailMetrics.length 
-                  : 0}
-                previousValue={compareEmailMetrics.length > 0
-                  ? sum(compareEmailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / compareEmailMetrics.length
-                  : 0}
-                trend={calculateTrend(
-                  emailMetrics.length > 0 ? sum(emailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / emailMetrics.length : 0,
-                  compareEmailMetrics.length > 0 ? sum(compareEmailMetrics.map((metric) => Number(metric.taxa_hard_bounce))) / compareEmailMetrics.length : 0
-                )}
-                format="percent"
-              />
-              <KPICard
-                title="Taxa de Abertura"
-                value={avgTaxaAbertura}
-                previousValue={compareAvgTaxaAbertura}
-                trend={calculateTrend(avgTaxaAbertura, compareAvgTaxaAbertura)}
-                format="percent"
-              />
-              <KPICard
-                title="Taxa de Clique"
-                value={avgTaxaClique}
-                previousValue={compareAvgTaxaClique}
-                trend={calculateTrend(avgTaxaClique, compareAvgTaxaClique)}
-                format="percent"
-              />
-              <KPICard
-                title="Taxa de Conversao"
-                value={emailMetrics.length > 0 
-                  ? sum(emailMetrics.map((metric) => Number(metric.taxa_conversao))) / emailMetrics.length 
-                  : 0}
-                previousValue={compareAvgTaxaConversao}
-                trend={calculateTrend(
-                  emailMetrics.length > 0 ? sum(emailMetrics.map((metric) => Number(metric.taxa_conversao))) / emailMetrics.length : 0,
-                  compareAvgTaxaConversao
-                )}
-                format="percent"
-              />
-            </div>
+            <MetricOrderControl
+              key="content-email"
+              storageKey="avalyst-dashboard-kpis-content-email"
+              metrics={contentKpiMetrics}
+              defaultMetricIds={[
+                'content-email-entrega',
+                'content-email-hard-bounce',
+                'content-email-abertura',
+                'content-email-clique',
+                'content-email-conversao',
+              ]}
+            />
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-base font-medium">Comparativo Email Marketing</CardTitle>
@@ -293,47 +443,18 @@ export default function ConteudoPage() {
       case 'seo':
         return (
           <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-              <KPICard
-                title="Trafego Organico"
-                value={totalTrafegoOrganico}
-                format="number"
-                icon={<Search className="h-4 w-4" />}
-              />
-              <KPICard
-                title="Sessoes"
-                value={totalSessoes}
-                previousValue={compareSessoes}
-                trend={calculateTrend(totalSessoes, compareSessoes)}
-                format="number"
-              />
-              <KPICard
-                title="Usuarios"
-                value={seoMetrics.reduce((acc, m) => acc + m.usuarios, 0)}
-                previousValue={compareUsuarios}
-                trend={calculateTrend(sum(seoMetrics.map((metric) => metric.usuarios)), compareUsuarios)}
-                format="number"
-              />
-              <KPICard
-                title="Palavras Indexadas"
-                value={totalPalavrasIndexadas}
-                previousValue={comparePalavrasIndexadas}
-                trend={calculateTrend(totalPalavrasIndexadas, comparePalavrasIndexadas)}
-                format="number"
-              />
-              <KPICard
-                title="Desempenho Site"
-                value={seoMetrics.length > 0 
-                  ? sum(seoMetrics.map((metric) => Number(metric.desempenho_site))) / seoMetrics.length 
-                  : 0}
-                previousValue={compareDesempenhoSite}
-                trend={calculateTrend(
-                  seoMetrics.length > 0 ? sum(seoMetrics.map((metric) => Number(metric.desempenho_site))) / seoMetrics.length : 0,
-                  compareDesempenhoSite
-                )}
-                format="percent"
-              />
-            </div>
+            <MetricOrderControl
+              key="content-seo"
+              storageKey="avalyst-dashboard-kpis-content-seo"
+              metrics={contentKpiMetrics}
+              defaultMetricIds={[
+                'content-seo-trafego',
+                'content-seo-sessoes',
+                'content-seo-usuarios',
+                'content-seo-palavras',
+                'content-seo-desempenho',
+              ]}
+            />
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-base font-medium">Comparativo SEO</CardTitle>
@@ -349,73 +470,39 @@ export default function ConteudoPage() {
         )
       case 'instagram':
         return (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-            <KPICard
-              title="Trafego/Sessoes"
-              value={instagramMetrics.reduce((acc, m) => acc + m.trafego_organico, 0)}
-              format="number"
-              icon={<Instagram className="h-4 w-4" />}
+          <>
+            <MetricOrderControl
+              key="content-instagram"
+              storageKey="avalyst-dashboard-kpis-content-instagram"
+              metrics={contentKpiMetrics}
+              defaultMetricIds={[
+                'content-instagram-trafego',
+                'content-instagram-leads',
+                'content-instagram-conversao',
+              ]}
             />
-            <KPICard
-              title="Conversao de Lead"
-              value={totalInstagramLeads}
-              previousValue={compareInstagramLeads}
-              trend={calculateTrend(totalInstagramLeads, compareInstagramLeads)}
-              format="number"
-            />
-            <KPICard
-              title="Taxa de Conversao"
-              value={instagramMetrics.length > 0 
-                ? sum(instagramMetrics.map((metric) => Number(metric.taxa_conversao))) / instagramMetrics.length 
-                : 0}
-              previousValue={compareInstagramMetrics.length > 0
-                ? sum(compareInstagramMetrics.map((metric) => Number(metric.taxa_conversao))) / compareInstagramMetrics.length
-                : 0}
-              trend={calculateTrend(
-                instagramMetrics.length > 0 ? sum(instagramMetrics.map((metric) => Number(metric.taxa_conversao))) / instagramMetrics.length : 0,
-                compareInstagramMetrics.length > 0 ? sum(compareInstagramMetrics.map((metric) => Number(metric.taxa_conversao))) / compareInstagramMetrics.length : 0
-              )}
-              format="percent"
-            />
-            <div className="lg:col-span-3">
+            <div className="mb-8">
               <ComparisonChart title="Comparativo Instagram" data={getComparisonChartData()} />
             </div>
-          </div>
+          </>
         )
       case 'linkedin':
         return (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-            <KPICard
-              title="Trafego/Sessoes"
-              value={linkedinMetrics.reduce((acc, m) => acc + m.trafego_organico, 0)}
-              format="number"
-              icon={<Linkedin className="h-4 w-4" />}
+          <>
+            <MetricOrderControl
+              key="content-linkedin"
+              storageKey="avalyst-dashboard-kpis-content-linkedin"
+              metrics={contentKpiMetrics}
+              defaultMetricIds={[
+                'content-linkedin-trafego',
+                'content-linkedin-leads',
+                'content-linkedin-conversao',
+              ]}
             />
-            <KPICard
-              title="Conversao de Lead"
-              value={totalLinkedinLeads}
-              previousValue={compareLinkedinLeads}
-              trend={calculateTrend(totalLinkedinLeads, compareLinkedinLeads)}
-              format="number"
-            />
-            <KPICard
-              title="Taxa de Conversao"
-              value={linkedinMetrics.length > 0 
-                ? sum(linkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / linkedinMetrics.length 
-                : 0}
-              previousValue={compareLinkedinMetrics.length > 0
-                ? sum(compareLinkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / compareLinkedinMetrics.length
-                : 0}
-              trend={calculateTrend(
-                linkedinMetrics.length > 0 ? sum(linkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / linkedinMetrics.length : 0,
-                compareLinkedinMetrics.length > 0 ? sum(compareLinkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / compareLinkedinMetrics.length : 0
-              )}
-              format="percent"
-            />
-            <div className="lg:col-span-3">
+            <div className="mb-8">
               <ComparisonChart title="Comparativo LinkedIn" data={getComparisonChartData()} />
             </div>
-          </div>
+          </>
         )
       default:
         return null

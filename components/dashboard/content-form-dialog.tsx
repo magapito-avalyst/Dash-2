@@ -58,41 +58,43 @@ export function ContentFormDialog({
   })
 
   useEffect(() => {
-    if (metric) {
-      setFormData({
-        reference_date: metric.reference_date,
-        channel: metric.channel,
-        taxa_entrega: String(metric.taxa_entrega),
-        taxa_hard_bounce: String(metric.taxa_hard_bounce),
-        taxa_abertura: String(metric.taxa_abertura),
-        taxa_clique: String(metric.taxa_clique),
-        taxa_conversao: String(metric.taxa_conversao),
-        trafego_organico: String(metric.trafego_organico),
-        sessoes: String(metric.sessoes),
-        usuarios: String(metric.usuarios),
-        palavras_indexadas: String(metric.palavras_indexadas),
-        tempo_pagina: String(metric.tempo_pagina),
-        desempenho_site: String(metric.desempenho_site),
-        conversao_lead: String(metric.conversao_lead),
-      })
-    } else {
-      setFormData({
-        reference_date: new Date().toISOString().split('T')[0],
-        channel: defaultChannel,
-        taxa_entrega: '',
-        taxa_hard_bounce: '',
-        taxa_abertura: '',
-        taxa_clique: '',
-        taxa_conversao: '',
-        trafego_organico: '',
-        sessoes: '',
-        usuarios: '',
-        palavras_indexadas: '',
-        tempo_pagina: '',
-        desempenho_site: '',
-        conversao_lead: '',
-      })
-    }
+    queueMicrotask(() => {
+      if (metric) {
+        setFormData({
+          reference_date: metric.reference_date,
+          channel: metric.channel,
+          taxa_entrega: String(metric.taxa_entrega),
+          taxa_hard_bounce: String(metric.taxa_hard_bounce),
+          taxa_abertura: String(metric.taxa_abertura),
+          taxa_clique: String(metric.taxa_clique),
+          taxa_conversao: String(metric.taxa_conversao),
+          trafego_organico: String(metric.trafego_organico),
+          sessoes: String(metric.sessoes),
+          usuarios: String(metric.usuarios),
+          palavras_indexadas: String(metric.palavras_indexadas),
+          tempo_pagina: String(metric.tempo_pagina),
+          desempenho_site: String(metric.desempenho_site),
+          conversao_lead: String(metric.conversao_lead),
+        })
+      } else {
+        setFormData({
+          reference_date: new Date().toISOString().split('T')[0],
+          channel: defaultChannel,
+          taxa_entrega: '',
+          taxa_hard_bounce: '',
+          taxa_abertura: '',
+          taxa_clique: '',
+          taxa_conversao: '',
+          trafego_organico: '',
+          sessoes: '',
+          usuarios: '',
+          palavras_indexadas: '',
+          tempo_pagina: '',
+          desempenho_site: '',
+          conversao_lead: '',
+        })
+      }
+    })
   }, [metric, open, defaultChannel])
 
   const handleSubmit = async (e: React.FormEvent) => {

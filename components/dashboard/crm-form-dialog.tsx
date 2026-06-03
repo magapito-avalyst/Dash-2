@@ -42,33 +42,35 @@ export function CRMFormDialog({
   })
 
   useEffect(() => {
-    if (metric) {
-      setFormData({
-        reference_date: metric.reference_date,
-        novos_leads: String(metric.novos_leads),
-        status_won: String(metric.status_won),
-        status_lost: String(metric.status_lost),
-        fase_novos_leads: String(metric.fase_novos_leads),
-        fase_discovery: String(metric.fase_discovery),
-        fase_qualificacao: String(metric.fase_qualificacao),
-        fase_cadencia: String(metric.fase_cadencia),
-        fase_conexao: String(metric.fase_conexao),
-        fase_reuniao_agendada: String(metric.fase_reuniao_agendada),
-      })
-    } else {
-      setFormData({
-        reference_date: new Date().toISOString().split('T')[0],
-        novos_leads: '',
-        status_won: '',
-        status_lost: '',
-        fase_novos_leads: '',
-        fase_discovery: '',
-        fase_qualificacao: '',
-        fase_cadencia: '',
-        fase_conexao: '',
-        fase_reuniao_agendada: '',
-      })
-    }
+    queueMicrotask(() => {
+      if (metric) {
+        setFormData({
+          reference_date: metric.reference_date,
+          novos_leads: String(metric.novos_leads),
+          status_won: String(metric.status_won),
+          status_lost: String(metric.status_lost),
+          fase_novos_leads: String(metric.fase_novos_leads),
+          fase_discovery: String(metric.fase_discovery),
+          fase_qualificacao: String(metric.fase_qualificacao),
+          fase_cadencia: String(metric.fase_cadencia),
+          fase_conexao: String(metric.fase_conexao),
+          fase_reuniao_agendada: String(metric.fase_reuniao_agendada),
+        })
+      } else {
+        setFormData({
+          reference_date: new Date().toISOString().split('T')[0],
+          novos_leads: '',
+          status_won: '',
+          status_lost: '',
+          fase_novos_leads: '',
+          fase_discovery: '',
+          fase_qualificacao: '',
+          fase_cadencia: '',
+          fase_conexao: '',
+          fase_reuniao_agendada: '',
+        })
+      }
+    })
   }, [metric, open])
 
   const handleSubmit = async (event: React.FormEvent) => {

@@ -48,31 +48,33 @@ export function ADSFormDialog({
   })
 
   useEffect(() => {
-    if (metric) {
-      setFormData({
-        reference_date: metric.reference_date,
-        platform: metric.platform,
-        taxa_conversao: String(metric.taxa_conversao),
-        taxa_clique: String(metric.taxa_clique),
-        impressoes: String(metric.impressoes),
-        cliques: String(metric.cliques),
-        custo_clique: String(metric.custo_clique),
-        custo_aquisicao: String(metric.custo_aquisicao),
-        investimento: String(metric.investimento),
-      })
-    } else {
-      setFormData({
-        reference_date: new Date().toISOString().split('T')[0],
-        platform: 'google',
-        taxa_conversao: '',
-        taxa_clique: '',
-        impressoes: '',
-        cliques: '',
-        custo_clique: '',
-        custo_aquisicao: '',
-        investimento: '',
-      })
-    }
+    queueMicrotask(() => {
+      if (metric) {
+        setFormData({
+          reference_date: metric.reference_date,
+          platform: metric.platform,
+          taxa_conversao: String(metric.taxa_conversao),
+          taxa_clique: String(metric.taxa_clique),
+          impressoes: String(metric.impressoes),
+          cliques: String(metric.cliques),
+          custo_clique: String(metric.custo_clique),
+          custo_aquisicao: String(metric.custo_aquisicao),
+          investimento: String(metric.investimento),
+        })
+      } else {
+        setFormData({
+          reference_date: new Date().toISOString().split('T')[0],
+          platform: 'google',
+          taxa_conversao: '',
+          taxa_clique: '',
+          impressoes: '',
+          cliques: '',
+          custo_clique: '',
+          custo_aquisicao: '',
+          investimento: '',
+        })
+      }
+    })
   }, [metric, open])
 
   const handleSubmit = async (event: React.FormEvent) => {

@@ -6,9 +6,12 @@ import { Plus, MousePointerClick, Percent, Eye, DollarSign } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DateFilter, CompareMode, getComparisonDates } from '@/components/dashboard/date-filter'
-import { KPICard } from '@/components/dashboard/kpi-card'
 import { ADSFormDialog } from '@/components/dashboard/ads-form-dialog'
 import { ComparisonChart } from '@/components/dashboard/comparison-chart'
+import {
+  MetricOrderControl,
+  type OrderedMetricOption,
+} from '@/components/dashboard/metric-order-control'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -69,7 +72,9 @@ export default function ADSPage() {
   }, [selectedMonth, compareMode])
 
   useEffect(() => {
-    fetchMetrics()
+    queueMicrotask(() => {
+      fetchMetrics()
+    })
   }, [fetchMetrics])
 
   const handleSubmit = async (data: Partial<ADSMetric>) => {
@@ -118,6 +123,8 @@ export default function ADSPage() {
   const avgTaxaClique =
     metrics.length > 0 ? sum(metrics.map((metric) => Number(metric.taxa_clique))) / metrics.length : 0
   const totalImpressoes = sum(metrics.map((metric) => metric.impressoes))
+  const totalCliques = sum(metrics.map((metric) => metric.cliques))
+  const totalInvestimento = sum(metrics.map((metric) => Number(metric.investimento)))
   const avgCustoClique =
     metrics.length > 0 ? sum(metrics.map((metric) => Number(metric.custo_clique))) / metrics.length : 0
   const avgCustoAquisicao =
@@ -132,6 +139,8 @@ export default function ADSPage() {
       ? sum(compareMetrics.map((metric) => Number(metric.taxa_clique))) / compareMetrics.length
       : 0
   const prevImpressoes = sum(compareMetrics.map((metric) => metric.impressoes))
+  const prevCliques = sum(compareMetrics.map((metric) => metric.cliques))
+  const prevInvestimento = sum(compareMetrics.map((metric) => Number(metric.investimento)))
   const prevCustoClique =
     compareMetrics.length > 0
       ? sum(compareMetrics.map((metric) => Number(metric.custo_clique))) / compareMetrics.length
@@ -163,6 +172,79 @@ export default function ADSPage() {
     }
   })
 
+  const kpiMetrics: OrderedMetricOption[] = [
+    {
+      id: 'ads-taxa-conversao',
+      title: 'Taxa de Conversao',
+      value: avgTaxaConversao,
+      previousValue: prevTaxaConversao,
+      trend: calculateTrend(avgTaxaConversao, prevTaxaConversao),
+      format: 'percent',
+      icon: <Percent className="h-4 w-4" />,
+      category: 'Performance ADS',
+    },
+    {
+      id: 'ads-taxa-clique',
+      title: 'Taxa de Clique',
+      value: avgTaxaClique,
+      previousValue: prevTaxaClique,
+      trend: calculateTrend(avgTaxaClique, prevTaxaClique),
+      format: 'percent',
+      icon: <MousePointerClick className="h-4 w-4" />,
+      category: 'Performance ADS',
+    },
+    {
+      id: 'ads-impressoes',
+      title: 'Impressoes',
+      value: totalImpressoes,
+      previousValue: prevImpressoes,
+      trend: calculateTrend(totalImpressoes, prevImpressoes),
+      format: 'number',
+      icon: <Eye className="h-4 w-4" />,
+      category: 'Volume',
+    },
+    {
+      id: 'ads-cliques',
+      title: 'Cliques',
+      value: totalCliques,
+      previousValue: prevCliques,
+      trend: calculateTrend(totalCliques, prevCliques),
+      format: 'number',
+      icon: <MousePointerClick className="h-4 w-4" />,
+      category: 'Volume',
+    },
+    {
+      id: 'ads-custo-clique',
+      title: 'Custo por Clique',
+      value: avgCustoClique,
+      previousValue: prevCustoClique,
+      trend: calculateTrend(avgCustoClique, prevCustoClique),
+      format: 'currency',
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Custos ADS',
+    },
+    {
+      id: 'ads-custo-aquisicao',
+      title: 'Custo por Aquisicao',
+      value: avgCustoAquisicao,
+      previousValue: prevCustoAquisicao,
+      trend: calculateTrend(avgCustoAquisicao, prevCustoAquisicao),
+      format: 'currency',
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Custos ADS',
+    },
+    {
+      id: 'ads-investimento',
+      title: 'Investimento em ADS',
+      value: totalInvestimento,
+      previousValue: prevInvestimento,
+      trend: calculateTrend(totalInvestimento, prevInvestimento),
+      format: 'currency',
+      icon: <DollarSign className="h-4 w-4" />,
+      category: 'Investimento',
+    },
+  ]
+
   return (
     <div className="min-h-screen">
       <DashboardHeader title="KPIs de ADS" subtitle="Performance e custos das campanhas pagas" />
@@ -186,47 +268,17 @@ export default function ADSPage() {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-          <KPICard
-            title="Taxa de Conversao"
-            value={avgTaxaConversao}
-            previousValue={prevTaxaConversao}
-            trend={calculateTrend(avgTaxaConversao, prevTaxaConversao)}
-            format="percent"
-            icon={<Percent className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Taxa de Clique"
-            value={avgTaxaClique}
-            previousValue={prevTaxaClique}
-            trend={calculateTrend(avgTaxaClique, prevTaxaClique)}
-            format="percent"
-            icon={<MousePointerClick className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Impressoes"
-            value={totalImpressoes}
-            previousValue={prevImpressoes}
-            trend={calculateTrend(totalImpressoes, prevImpressoes)}
-            format="number"
-            icon={<Eye className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Custo por Clique"
-            value={avgCustoClique}
-            previousValue={prevCustoClique}
-            trend={calculateTrend(avgCustoClique, prevCustoClique)}
-            format="currency"
-            icon={<DollarSign className="h-4 w-4" />}
-          />
-          <KPICard
-            title="Custo por Aquisicao"
-            value={avgCustoAquisicao}
-            previousValue={prevCustoAquisicao}
-            trend={calculateTrend(avgCustoAquisicao, prevCustoAquisicao)}
-            format="currency"
-          />
-        </div>
+        <MetricOrderControl
+          storageKey="avalyst-dashboard-kpis-ads"
+          metrics={kpiMetrics}
+          defaultMetricIds={[
+            'ads-taxa-conversao',
+            'ads-taxa-clique',
+            'ads-impressoes',
+            'ads-custo-clique',
+            'ads-custo-aquisicao',
+          ]}
+        />
 
         <div className="grid gap-6 md:grid-cols-2 mb-6">
           <ComparisonChart title="Performance de ADS" data={performanceChartData} />

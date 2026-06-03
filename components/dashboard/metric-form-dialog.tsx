@@ -47,29 +47,31 @@ export function MetricFormDialog({
   })
 
   useEffect(() => {
-    if (metric) {
-      setFormData({
-        reference_date: metric.reference_date,
-        source: metric.source,
-        investimento: String(metric.investimento),
-        mqls: String(metric.mqls),
-        demo_agendadas: String(metric.demo_agendadas),
-        demo_realizadas: String(metric.demo_realizadas),
-        onboarding: String(metric.onboarding),
-        ciclo_venda: String(metric.ciclo_venda),
-      })
-    } else {
-      setFormData({
-        reference_date: new Date().toISOString().split('T')[0],
-        source: 'Inbound',
-        investimento: '',
-        mqls: '',
-        demo_agendadas: '',
-        demo_realizadas: '',
-        onboarding: '',
-        ciclo_venda: '',
-      })
-    }
+    queueMicrotask(() => {
+      if (metric) {
+        setFormData({
+          reference_date: metric.reference_date,
+          source: metric.source,
+          investimento: String(metric.investimento),
+          mqls: String(metric.mqls),
+          demo_agendadas: String(metric.demo_agendadas),
+          demo_realizadas: String(metric.demo_realizadas),
+          onboarding: String(metric.onboarding),
+          ciclo_venda: String(metric.ciclo_venda),
+        })
+      } else {
+        setFormData({
+          reference_date: new Date().toISOString().split('T')[0],
+          source: 'Inbound',
+          investimento: '',
+          mqls: '',
+          demo_agendadas: '',
+          demo_realizadas: '',
+          onboarding: '',
+          ciclo_venda: '',
+        })
+      }
+    })
   }, [metric, open])
 
   const handleSubmit = async (e: React.FormEvent) => {

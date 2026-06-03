@@ -37,19 +37,21 @@ export function ProjectMetricFormDialog({
   })
 
   useEffect(() => {
-    if (metric) {
-      setFormData({
-        reference_date: metric.reference_date,
-        metric_name: metric.metric_name,
-        metric_value: String(metric.metric_value),
-      })
-      return
-    }
+    queueMicrotask(() => {
+      if (metric) {
+        setFormData({
+          reference_date: metric.reference_date,
+          metric_name: metric.metric_name,
+          metric_value: String(metric.metric_value),
+        })
+        return
+      }
 
-    setFormData({
-      reference_date: new Date().toISOString().split('T')[0],
-      metric_name: '',
-      metric_value: '',
+      setFormData({
+        reference_date: new Date().toISOString().split('T')[0],
+        metric_name: '',
+        metric_value: '',
+      })
     })
   }, [metric, open])
 

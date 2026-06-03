@@ -1,4 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
+import { getCanonicalDashboardPathname, isDashboardPathname } from '@/lib/dashboard-routes'
+import { getSupabaseEnv } from './env'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
@@ -6,19 +8,36 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  // Normalize dashboard route casing to prevent 404s in case-sensitive environments
+  const canonicalDashboardPathname = getCanonicalDashboardPathname(request.nextUrl.pathname)
+
+  // Normalize common dashboard aliases before routing to avoid 404s.
   if (
-    request.nextUrl.pathname.startsWith('/dashboard/') &&
-    request.nextUrl.pathname !== request.nextUrl.pathname.toLowerCase()
+    canonicalDashboardPathname &&
+    request.nextUrl.pathname !== canonicalDashboardPathname
   ) {
     const normalizedUrl = request.nextUrl.clone()
-    normalizedUrl.pathname = request.nextUrl.pathname.toLowerCase()
+    normalizedUrl.pathname = canonicalDashboardPathname
     return NextResponse.redirect(normalizedUrl)
   }
 
+  const { isConfigured, supabaseUrl, supabaseAnonKey } = getSupabaseEnv()
+
+  if (!isConfigured) {
+    if (
+      isDashboardPathname(request.nextUrl.pathname) ||
+      request.nextUrl.pathname === '/'
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!,
+    supabaseAnonKey!,
     {
       cookies: {
         getAll() {
@@ -45,7 +64,7 @@ export async function updateSession(request: NextRequest) {
 
   // Protect dashboard routes - redirect to login if not authenticated
   if (
-    request.nextUrl.pathname.startsWith('/dashboard') &&
+    isDashboardPathname(request.nextUrl.pathname) &&
     !user
   ) {
     const url = request.nextUrl.clone()
