@@ -374,6 +374,7 @@ export async function GET(request: NextRequest) {
   if (!tokenResolution) {
     return NextResponse.json(
       {
+        setupRequired: true,
         error: 'OAuth RD Station nao configurado',
         authRequired: [
           'RD_STATION_ACCESS_TOKEN',
@@ -383,7 +384,7 @@ export async function GET(request: NextRequest) {
         message:
           'As estatisticas de E-mail Marketing da RD Station exigem OAuth2/Bearer token. A API Key serve apenas para eventos de conversao.',
       },
-      { status: 428 }
+      { status: 200 }
     )
   }
 
