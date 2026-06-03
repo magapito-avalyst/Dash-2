@@ -55,7 +55,7 @@ export function KPICard({
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{formatValue(value, format)}</div>
-        {(trend || previousValue !== undefined) && (
+        {(trend || previousValue !== undefined || trendLabel) && (
           <div className="flex items-center gap-1 mt-1">
             {trend && <TrendIcon className={cn('h-4 w-4', trendColor)} />}
             <span className={cn('text-xs', trendColor)}>
