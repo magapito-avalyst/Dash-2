@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { startOfMonth } from 'date-fns'
+import { format, startOfMonth } from 'date-fns'
 import { Plus, Mail, Search, Instagram, Linkedin } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardHeader } from '@/components/dashboard/header'
@@ -74,8 +74,10 @@ export default function ConteudoPage() {
     selectedMonth,
     compareMode
   )
-  const rdStartDate = rdCurrentStart.toISOString().split('T')[0]
-  const rdEndDate = rdCurrentEnd.toISOString().split('T')[0]
+  const rdToday = new Date()
+  const rdSafeEndDate = rdCurrentEnd > rdToday ? rdToday : rdCurrentEnd
+  const rdStartDate = format(rdCurrentStart, 'yyyy-MM-dd')
+  const rdEndDate = format(rdSafeEndDate, 'yyyy-MM-dd')
 
   const handleSubmit = async (data: Partial<ContentMetric>) => {
     const supabase = createClient()
@@ -434,7 +436,11 @@ export default function ConteudoPage() {
                 'content-email-conversao',
               ]}
             />
-            <RDStationEmailAnalytics startDate={rdStartDate} endDate={rdEndDate} />
+            <RDStationEmailAnalytics
+              key={`${rdStartDate}-${rdEndDate}`}
+              startDate={rdStartDate}
+              endDate={rdEndDate}
+            />
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-base font-medium">Comparativo Email Marketing</CardTitle>

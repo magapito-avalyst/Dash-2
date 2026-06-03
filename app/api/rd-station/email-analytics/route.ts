@@ -224,6 +224,38 @@ function extractEmails(payload: unknown) {
   return []
 }
 
+function extractErrorMessage(payload: unknown) {
+  if (typeof payload === 'string') {
+    return payload
+  }
+
+  if (!isRecord(payload)) {
+    return ''
+  }
+
+  const candidateKeys = ['message', 'error', 'error_description', 'errors', 'details']
+
+  for (const key of candidateKeys) {
+    const value = payload[key]
+
+    if (typeof value === 'string' && value.trim()) {
+      return value
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+        .join(' ')
+    }
+  }
+
+  return JSON.stringify(payload)
+}
+
+function looksLikeApiKey(value: string) {
+  return !value.includes('.') && value.length >= 30
+}
+
 function buildAnalyticsUrl(request: NextRequest) {
   const url = new URL(`${RD_API_BASE_URL}/platform/analytics/emails`)
   const startDate = request.nextUrl.searchParams.get('start_date')
@@ -318,6 +350,10 @@ async function refreshAccessToken() {
 
 async function resolveAccessToken(): Promise<TokenResolution | null> {
   if (process.env.RD_STATION_ACCESS_TOKEN) {
+    if (looksLikeApiKey(process.env.RD_STATION_ACCESS_TOKEN) && !hasRefreshTokenConfig()) {
+      return null
+    }
+
     return {
       accessToken: process.env.RD_STATION_ACCESS_TOKEN,
       source: 'env',
@@ -341,6 +377,7 @@ async function fetchAnalytics(url: URL, accessToken: string) {
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
     },
     cache: 'no-store',
   })
@@ -382,7 +419,7 @@ export async function GET(request: NextRequest) {
         ],
         apiKeyConfigured: hasApiKey,
         message:
-          'As estatisticas de E-mail Marketing da RD Station exigem OAuth2/Bearer token. A API Key serve apenas para eventos de conversao.',
+          'As estatisticas de E-mail Marketing da RD Station exigem OAuth2/Bearer token. A API Key, inclusive quando colada em RD_STATION_ACCESS_TOKEN, serve apenas para eventos de conversao.',
       },
       { status: 200 }
     )
@@ -403,11 +440,31 @@ export async function GET(request: NextRequest) {
     }
 
     if (!response.ok) {
+      const rdMessage = extractErrorMessage(payload)
+
+      if (response.status === 401 || response.status === 403) {
+        return NextResponse.json(
+          {
+            setupRequired: true,
+            error: 'OAuth RD Station invalido ou sem permissao',
+            status: response.status,
+            details: payload,
+            message:
+              `A RD Station recusou a autenticacao (${response.status}). Use um access_token OAuth2 valido ou configure client_id, client_secret e refresh_token. ${rdMessage}`.trim(),
+          },
+          { status: 200 }
+        )
+      }
+
       return NextResponse.json(
         {
-          error: 'RD Station retornou erro ao consultar estatisticas de e-mail.',
+          error:
+            response.status === 400
+              ? 'RD Station recusou os parametros da consulta.'
+              : 'RD Station retornou erro ao consultar estatisticas de e-mail.',
           status: response.status,
           details: payload,
+          message: rdMessage,
         },
         { status: response.status }
       )

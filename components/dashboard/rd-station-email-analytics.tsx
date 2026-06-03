@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Check, Loader2, RefreshCw, Search } from 'lucide-react'
+import { AlertCircle, CalendarDays, Check, Loader2, RefreshCw, Search } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -43,12 +43,16 @@ type RDStationEmailAnalyticsResponse = {
   emails?: RDStationEmailAnalytics[]
   error?: string
   message?: string
+  status?: number
+  details?: unknown
   authRequired?: string | string[]
   setupRequired?: boolean
   apiKeyConfigured?: boolean
 }
 
 type KpiKey = 'sent' | 'delivered' | 'opened' | 'clicked'
+
+type RangePreset = 'today' | 'last7' | 'last30' | 'last90' | 'currentMonth' | 'previousMonth'
 
 type KpiCard = {
   key: KpiKey
@@ -76,6 +80,96 @@ const activeMetricLabels: Record<KpiKey, string> = {
   delivered: 'Emails entregues',
   opened: 'Taxa de abertura',
   clicked: 'Taxa de cliques unicos',
+}
+
+const rangePresetLabels: Record<RangePreset, string> = {
+  today: 'Hoje',
+  last7: '7 dias',
+  last30: '30 dias',
+  last90: '90 dias',
+  currentMonth: 'Mes atual',
+  previousMonth: 'Mes anterior',
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function isValidDateInput(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
+
+function makeSafeRange(startDate: string, endDate: string) {
+  const today = formatDateInput(new Date())
+  const normalizedStartDate = isValidDateInput(startDate) ? startDate : today
+  const normalizedEndDate = isValidDateInput(endDate) ? endDate : today
+  const cappedEndDate = normalizedEndDate > today ? today : normalizedEndDate
+
+  if (normalizedStartDate > cappedEndDate) {
+    return {
+      startDate: cappedEndDate,
+      endDate: cappedEndDate,
+    }
+  }
+
+  return {
+    startDate: normalizedStartDate,
+    endDate: cappedEndDate,
+  }
+}
+
+function getPresetRange(preset: RangePreset) {
+  const today = new Date()
+
+  switch (preset) {
+    case 'today':
+      return {
+        startDate: formatDateInput(today),
+        endDate: formatDateInput(today),
+      }
+    case 'last7':
+      return {
+        startDate: formatDateInput(addDays(today, -6)),
+        endDate: formatDateInput(today),
+      }
+    case 'last30':
+      return {
+        startDate: formatDateInput(addDays(today, -29)),
+        endDate: formatDateInput(today),
+      }
+    case 'last90':
+      return {
+        startDate: formatDateInput(addDays(today, -89)),
+        endDate: formatDateInput(today),
+      }
+    case 'currentMonth':
+      return {
+        startDate: formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1)),
+        endDate: formatDateInput(today),
+      }
+    case 'previousMonth': {
+      const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+
+      return {
+        startDate: formatDateInput(previousMonthStart),
+        endDate: formatDateInput(previousMonthEnd),
+      }
+    }
+    default:
+      return {
+        startDate: formatDateInput(today),
+        endDate: formatDateInput(today),
+      }
+  }
 }
 
 function formatNumber(value: number) {
@@ -150,6 +244,24 @@ function getChartFormatter(format: ChartValueFormat) {
   return (value: number) => (format === 'percent' ? formatPercent(value) : formatNumber(value))
 }
 
+function formatApiError(payload: RDStationEmailAnalyticsResponse) {
+  const parts = [
+    payload.error,
+    payload.message && payload.message !== payload.error ? payload.message : null,
+    payload.status ? `Status RD: ${payload.status}` : null,
+  ].filter(Boolean)
+
+  if (parts.length > 0) {
+    return parts.join(' ')
+  }
+
+  if (payload.details) {
+    return JSON.stringify(payload.details)
+  }
+
+  return 'Erro ao consultar dados da RD Station.'
+}
+
 function KpiSummaryCard({
   item,
   active,
@@ -218,6 +330,11 @@ export function RDStationEmailAnalytics({
   startDate,
   endDate,
 }: RDStationEmailAnalyticsProps) {
+  const initialRange = useMemo(() => makeSafeRange(startDate, endDate), [endDate, startDate])
+  const todayDate = useMemo(() => formatDateInput(new Date()), [])
+  const [rangeStart, setRangeStart] = useState(initialRange.startDate)
+  const [rangeEnd, setRangeEnd] = useState(initialRange.endDate)
+  const [queryRange, setQueryRange] = useState(initialRange)
   const [emails, setEmails] = useState<RDStationEmailAnalytics[]>([])
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([])
   const [activeMetric, setActiveMetric] = useState<KpiKey>('sent')
@@ -234,8 +351,8 @@ export function RDStationEmailAnalytics({
 
       try {
         const params = new URLSearchParams({
-          start_date: startDate,
-          end_date: endDate,
+          start_date: queryRange.startDate,
+          end_date: queryRange.endDate,
         })
         const response = await fetch(`/api/rd-station/email-analytics?${params.toString()}`, {
           signal,
@@ -246,7 +363,7 @@ export function RDStationEmailAnalytics({
           if (payload.authRequired) {
             setConfigMessage(payload.message || payload.error || 'Integracao RD Station pendente.')
           } else {
-            setError(payload.message || payload.error || 'Erro ao consultar dados da RD Station.')
+            setError(formatApiError(payload))
           }
 
           setEmails([])
@@ -286,7 +403,7 @@ export function RDStationEmailAnalytics({
         setIsLoading(false)
       }
     },
-    [endDate, startDate]
+    [queryRange.endDate, queryRange.startDate]
   )
 
   useEffect(() => {
@@ -437,6 +554,22 @@ export function RDStationEmailAnalytics({
     setSelectedCampaigns([])
   }
 
+  const applyRange = (nextStartDate = rangeStart, nextEndDate = rangeEnd) => {
+    const safeRange = makeSafeRange(nextStartDate, nextEndDate)
+
+    setRangeStart(safeRange.startDate)
+    setRangeEnd(safeRange.endDate)
+    setQueryRange(safeRange)
+  }
+
+  const applyPreset = (preset: RangePreset) => {
+    const presetRange = getPresetRange(preset)
+
+    setRangeStart(presetRange.startDate)
+    setRangeEnd(presetRange.endDate)
+    setQueryRange(presetRange)
+  }
+
   return (
     <section className="mb-8 space-y-6">
       <Card>
@@ -445,7 +578,7 @@ export function RDStationEmailAnalytics({
             <div>
               <CardTitle className="text-base font-medium">RD Station - E-mail Marketing</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Campanhas enviadas entre {startDate} e {endDate}
+                Campanhas enviadas entre {queryRange.startDate} e {queryRange.endDate}
               </p>
             </div>
             <Button
@@ -458,6 +591,46 @@ export function RDStationEmailAnalytics({
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Atualizar
             </Button>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+              <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                Inicio
+                <Input
+                  type="date"
+                  value={rangeStart}
+                  max={todayDate}
+                  onChange={(event) => setRangeStart(event.target.value)}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                Fim
+                <Input
+                  type="date"
+                  value={rangeEnd}
+                  max={todayDate}
+                  onChange={(event) => setRangeEnd(event.target.value)}
+                />
+              </label>
+              <Button type="button" variant="outline" onClick={() => applyRange()}>
+                <CalendarDays className="h-4 w-4" />
+                Aplicar prazo
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(rangePresetLabels) as RangePreset[]).map((preset) => (
+                <Button
+                  key={preset}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyPreset(preset)}
+                >
+                  {rangePresetLabels[preset]}
+                </Button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -477,6 +650,9 @@ export function RDStationEmailAnalytics({
               <Button type="button" variant="outline" size="sm" onClick={clearSelection}>
                 Limpar
               </Button>
+              <span className="flex h-8 items-center rounded-md border px-3 text-sm text-muted-foreground">
+                {selectedCampaigns.length} selecionado(s)
+              </span>
             </div>
           </div>
         </CardHeader>
