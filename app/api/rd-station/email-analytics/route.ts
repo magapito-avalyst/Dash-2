@@ -286,7 +286,7 @@ function buildAnalyticsUrl(request: NextRequest) {
   for (const campaignId of campaignIds) {
     const normalizedId = campaignId.trim()
 
-    if (/^\d+$/.test(normalizedId)) {
+    if (normalizedId) {
       url.searchParams.append('campaign_id', normalizedId)
     }
   }

@@ -12,7 +12,10 @@ import {
   MetricOrderControl,
   type OrderedMetricOption,
 } from '@/components/dashboard/metric-order-control'
-import { RDStationEmailAnalytics } from '@/components/dashboard/rd-station-email-analytics'
+import {
+  RDStationEmailAnalytics,
+  type RDStationEmailSummary,
+} from '@/components/dashboard/rd-station-email-analytics'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,6 +40,7 @@ export default function ConteudoPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMetric, setEditingMetric] = useState<ContentMetric | null>(null)
   const [activeChannel, setActiveChannel] = useState('email_marketing')
+  const [rdEmailSummary, setRdEmailSummary] = useState<RDStationEmailSummary | null>(null)
 
   const fetchMetrics = useCallback(async () => {
     const supabase = createClient()
@@ -190,14 +194,26 @@ export default function ConteudoPage() {
   const compareAvgLinkedinConversao = compareLinkedinMetrics.length > 0
     ? sum(compareLinkedinMetrics.map((metric) => Number(metric.taxa_conversao))) / compareLinkedinMetrics.length
     : 0
+  const hasRdEmailSummary = rdEmailSummary !== null
+  const rdMetricCount = (value: number) => (
+    new Intl.NumberFormat('pt-BR').format(Math.round(value))
+  )
+  const emailDeliveryRate = rdEmailSummary?.deliveredRate ?? avgTaxaEntrega
+  const emailHardBounceRate = rdEmailSummary?.hardBouncedRate ?? avgTaxaHardBounce
+  const emailOpenRate = rdEmailSummary?.openedRate ?? avgTaxaAbertura
+  const emailClickRate = rdEmailSummary?.clickedRate ?? avgTaxaClique
+  const emailFifthRate = rdEmailSummary?.unsubscribedRate ?? avgTaxaConversaoEmail
 
   const contentKpiMetrics: OrderedMetricOption[] = [
     {
       id: 'content-email-entrega',
       title: 'Taxa de Entrega',
-      value: avgTaxaEntrega,
-      previousValue: compareAvgTaxaEntrega,
-      trend: calculateTrend(avgTaxaEntrega, compareAvgTaxaEntrega),
+      value: emailDeliveryRate,
+      previousValue: hasRdEmailSummary ? undefined : compareAvgTaxaEntrega,
+      trend: hasRdEmailSummary ? undefined : calculateTrend(avgTaxaEntrega, compareAvgTaxaEntrega),
+      trendLabel: rdEmailSummary
+        ? `${rdMetricCount(rdEmailSummary.deliveredCount)} entregues`
+        : undefined,
       format: 'percent',
       icon: <Mail className="h-4 w-4" />,
       category: 'E-mail Marketing',
@@ -205,36 +221,48 @@ export default function ConteudoPage() {
     {
       id: 'content-email-hard-bounce',
       title: 'Taxa Hard Bounce',
-      value: avgTaxaHardBounce,
-      previousValue: compareAvgTaxaHardBounce,
-      trend: calculateTrend(avgTaxaHardBounce, compareAvgTaxaHardBounce),
+      value: emailHardBounceRate,
+      previousValue: hasRdEmailSummary ? undefined : compareAvgTaxaHardBounce,
+      trend: hasRdEmailSummary ? undefined : calculateTrend(avgTaxaHardBounce, compareAvgTaxaHardBounce),
+      trendLabel: rdEmailSummary
+        ? `${rdMetricCount(rdEmailSummary.hardBouncedCount)} hard bounces`
+        : undefined,
       format: 'percent',
       category: 'E-mail Marketing',
     },
     {
       id: 'content-email-abertura',
       title: 'Taxa de Abertura',
-      value: avgTaxaAbertura,
-      previousValue: compareAvgTaxaAbertura,
-      trend: calculateTrend(avgTaxaAbertura, compareAvgTaxaAbertura),
+      value: emailOpenRate,
+      previousValue: hasRdEmailSummary ? undefined : compareAvgTaxaAbertura,
+      trend: hasRdEmailSummary ? undefined : calculateTrend(avgTaxaAbertura, compareAvgTaxaAbertura),
+      trendLabel: rdEmailSummary
+        ? `${rdMetricCount(rdEmailSummary.openedCount)} aberturas`
+        : undefined,
       format: 'percent',
       category: 'E-mail Marketing',
     },
     {
       id: 'content-email-clique',
       title: 'Taxa de Clique',
-      value: avgTaxaClique,
-      previousValue: compareAvgTaxaClique,
-      trend: calculateTrend(avgTaxaClique, compareAvgTaxaClique),
+      value: emailClickRate,
+      previousValue: hasRdEmailSummary ? undefined : compareAvgTaxaClique,
+      trend: hasRdEmailSummary ? undefined : calculateTrend(avgTaxaClique, compareAvgTaxaClique),
+      trendLabel: rdEmailSummary
+        ? `${rdMetricCount(rdEmailSummary.clickedCount)} cliques`
+        : undefined,
       format: 'percent',
       category: 'E-mail Marketing',
     },
     {
       id: 'content-email-conversao',
-      title: 'Taxa de Conversao',
-      value: avgTaxaConversaoEmail,
-      previousValue: compareAvgTaxaConversao,
-      trend: calculateTrend(avgTaxaConversaoEmail, compareAvgTaxaConversao),
+      title: hasRdEmailSummary ? 'Taxa de Descadastro' : 'Taxa de Conversao',
+      value: emailFifthRate,
+      previousValue: hasRdEmailSummary ? undefined : compareAvgTaxaConversao,
+      trend: hasRdEmailSummary ? undefined : calculateTrend(avgTaxaConversaoEmail, compareAvgTaxaConversao),
+      trendLabel: rdEmailSummary
+        ? `${rdMetricCount(rdEmailSummary.unsubscribedCount)} descadastros`
+        : undefined,
       format: 'percent',
       category: 'E-mail Marketing',
     },
@@ -437,22 +465,10 @@ export default function ConteudoPage() {
               ]}
             />
             <RDStationEmailAnalytics
-              key={`${rdStartDate}-${rdEndDate}`}
               startDate={rdStartDate}
               endDate={rdEndDate}
+              onSummaryChange={setRdEmailSummary}
             />
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="text-base font-medium">Comparativo Email Marketing</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ComparisonChart
-                  title="Indicadores de E-mail"
-                  data={getComparisonChartData()}
-                  formatter="percent"
-                />
-              </CardContent>
-            </Card>
           </>
         )
       case 'seo':
@@ -562,102 +578,87 @@ export default function ConteudoPage() {
               <>
                 {renderChannelContent()}
 
-                {/* Data Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base font-medium">Dados do Periodo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          {activeChannel === 'email_marketing' && (
-                            <>
-                              <TableHead className="text-right">Entrega %</TableHead>
-                              <TableHead className="text-right">Abertura %</TableHead>
-                              <TableHead className="text-right">Clique %</TableHead>
-                              <TableHead className="text-right">Conversao %</TableHead>
-                            </>
-                          )}
-                          {activeChannel === 'seo' && (
-                            <>
-                              <TableHead className="text-right">Trafego</TableHead>
-                              <TableHead className="text-right">Sessoes</TableHead>
-                              <TableHead className="text-right">Usuarios</TableHead>
-                              <TableHead className="text-right">Palavras</TableHead>
-                            </>
-                          )}
-                          {(activeChannel === 'instagram' || activeChannel === 'linkedin') && (
-                            <>
-                              <TableHead className="text-right">Trafego</TableHead>
-                              <TableHead className="text-right">Leads</TableHead>
-                              <TableHead className="text-right">Conversao %</TableHead>
-                            </>
-                          )}
-                          <TableHead className="w-20"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {getCurrentChannelMetrics().map((metric) => (
-                          <TableRow key={metric.id}>
-                            <TableCell>{metric.reference_date}</TableCell>
-                            {activeChannel === 'email_marketing' && (
-                              <>
-                                <TableCell className="text-right">{Number(metric.taxa_entrega).toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">{Number(metric.taxa_abertura).toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">{Number(metric.taxa_clique).toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">{Number(metric.taxa_conversao).toFixed(2)}%</TableCell>
-                              </>
-                            )}
+                {activeChannel !== 'email_marketing' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base font-medium">Dados do Periodo</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
                             {activeChannel === 'seo' && (
                               <>
-                                <TableCell className="text-right">{metric.trafego_organico}</TableCell>
-                                <TableCell className="text-right">{metric.sessoes}</TableCell>
-                                <TableCell className="text-right">{metric.usuarios}</TableCell>
-                                <TableCell className="text-right">{metric.palavras_indexadas}</TableCell>
+                                <TableHead className="text-right">Trafego</TableHead>
+                                <TableHead className="text-right">Sessoes</TableHead>
+                                <TableHead className="text-right">Usuarios</TableHead>
+                                <TableHead className="text-right">Palavras</TableHead>
                               </>
                             )}
                             {(activeChannel === 'instagram' || activeChannel === 'linkedin') && (
                               <>
-                                <TableCell className="text-right">{metric.trafego_organico}</TableCell>
-                                <TableCell className="text-right">{metric.conversao_lead}</TableCell>
-                                <TableCell className="text-right">{Number(metric.taxa_conversao).toFixed(2)}%</TableCell>
+                                <TableHead className="text-right">Trafego</TableHead>
+                                <TableHead className="text-right">Leads</TableHead>
+                                <TableHead className="text-right">Conversao %</TableHead>
                               </>
                             )}
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => { setEditingMetric(metric); setDialogOpen(true) }}
-                                  className="h-8 w-8"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(metric.id)}
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                            <TableHead className="w-20"></TableHead>
                           </TableRow>
-                        ))}
-                        {getCurrentChannelMetrics().length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                              Nenhum dado encontrado para este periodo.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {getCurrentChannelMetrics().map((metric) => (
+                            <TableRow key={metric.id}>
+                              <TableCell>{metric.reference_date}</TableCell>
+                              {activeChannel === 'seo' && (
+                                <>
+                                  <TableCell className="text-right">{metric.trafego_organico}</TableCell>
+                                  <TableCell className="text-right">{metric.sessoes}</TableCell>
+                                  <TableCell className="text-right">{metric.usuarios}</TableCell>
+                                  <TableCell className="text-right">{metric.palavras_indexadas}</TableCell>
+                                </>
+                              )}
+                              {(activeChannel === 'instagram' || activeChannel === 'linkedin') && (
+                                <>
+                                  <TableCell className="text-right">{metric.trafego_organico}</TableCell>
+                                  <TableCell className="text-right">{metric.conversao_lead}</TableCell>
+                                  <TableCell className="text-right">{Number(metric.taxa_conversao).toFixed(2)}%</TableCell>
+                                </>
+                              )}
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => { setEditingMetric(metric); setDialogOpen(true) }}
+                                    className="h-8 w-8"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(metric.id)}
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {getCurrentChannelMetrics().length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                Nenhum dado encontrado para este periodo.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </TabsContent>
