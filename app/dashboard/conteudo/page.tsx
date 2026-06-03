@@ -12,6 +12,7 @@ import {
   MetricOrderControl,
   type OrderedMetricOption,
 } from '@/components/dashboard/metric-order-control'
+import { RDStationEmailAnalytics } from '@/components/dashboard/rd-station-email-analytics'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -68,6 +69,13 @@ export default function ConteudoPage() {
       fetchMetrics()
     })
   }, [fetchMetrics])
+
+  const { currentStart: rdCurrentStart, currentEnd: rdCurrentEnd } = getComparisonDates(
+    selectedMonth,
+    compareMode
+  )
+  const rdStartDate = rdCurrentStart.toISOString().split('T')[0]
+  const rdEndDate = rdCurrentEnd.toISOString().split('T')[0]
 
   const handleSubmit = async (data: Partial<ContentMetric>) => {
     const supabase = createClient()
@@ -426,6 +434,7 @@ export default function ConteudoPage() {
                 'content-email-conversao',
               ]}
             />
+            <RDStationEmailAnalytics startDate={rdStartDate} endDate={rdEndDate} />
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-base font-medium">Comparativo Email Marketing</CardTitle>
